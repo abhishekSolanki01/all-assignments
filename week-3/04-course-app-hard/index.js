@@ -64,7 +64,7 @@ const userAuth = async (req, res, next) => {
   }
   const token = authorization.split(" ")[1];
   const decodeToken = await jwt.verify(token, SECRET);
-  const user = await User.exists({username: user.username})
+  const user = await User.exists({username: decodeToken.username})
   if(user){
     req.user = decodeToken
     next();
@@ -109,7 +109,7 @@ app.post('/admin/signup', async (req, res) => {
 
 app.post('/admin/login', async(req, res) => {
   const {username, password} = req.headers;
-  const ifAdminExist = await Admin.exists({ usrname });
+  const ifAdminExist = await Admin.exists({ username, password });
   if(ifAdminExist){
     const token = jwt.sign({ username, role: 'admin' }, SECRET, { expiresIn: '1h' });
     res.json({ message: 'Logged in successfully', token });
@@ -123,14 +123,14 @@ app.post('/admin/courses', auth, courseValidation ,async(req, res) => {
   const obj = {title, description, price, imageLink, published };
   const courseDB = new Course(obj);
   await courseDB.save()
-  res.json({ message: 'Course created successfully', courseId: course.id });
+  res.json({ message: 'Course created successfully', courseId: courseDB.id });
 
 });
 
 app.put('/admin/courses/:courseId', auth, async (req, res) => {
   const { courseId } = req.params;
   const { title, description, price, imageLink, published } = req.body;
-  const updateCourseById = await Course.findOneAndUpdate({_id: courseId}, { title, description, price, imageLink, published }, { new: true })
+  const updateCourseById = await Course.findByIdAndUpdate(courseId, { title, description, price, imageLink, published }, { new: true })
 
   if(updateCourseById){
     res.json({ message: 'Course updated successfully' });
@@ -148,7 +148,7 @@ app.get('/admin/courses', auth, async (req, res) => {
 // User routes
 app.post('/users/signup', async (req, res) => {
   const { username, password } = req.body;
-  const addUser = await User.exist({username})
+  const addUser = await User.exists({username})
   if(addUser){
     res.status(403).json({ message: 'User already exists' });
   }else{
