@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const app = express();
 
+
 app.use(express.json());
 
 const SECRET = 'SECr3t';  // This should be in an environment variable in a real application
