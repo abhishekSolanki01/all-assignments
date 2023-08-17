@@ -5,9 +5,11 @@ const mongoose = require("mongoose")
 const Schema = mongoose.Schema;
 const model = mongoose.model;
 const Joi = require("joi");
+const cors = require("cors")
 const CONNECTION_STRING = `mongodb+srv://abhishek:12345@cluster0.pcghker.mongodb.net/?retryWrites=true&w=majority`
 const SECRET = "secret"
 
+app.use(cors())
 app.use(express.json());
 
 //let ADMINS = [];
@@ -40,11 +42,13 @@ const Course = model('course', courseSchema)
 mongoose.connect(CONNECTION_STRING, { useNewUrlParser: true, useUnifiedTopology: true, dbName: "courses" });
 
 //middleware 
-//auth
+//auth 
 const auth = async (req, res, next) => {
-  const authorization = req.headers.authorization;
+  try{
+    const authorization = req.headers.authorization;
   if(!authorization){
-    return res.status(403)
+    console.log("Unauth");
+    return res.status(403).send({message: "Unauthorised"})
   }
   const token = authorization.split(" ")[1];
   const decodeToken = await jwt.verify(token, SECRET);
@@ -53,26 +57,36 @@ const auth = async (req, res, next) => {
     req.user = decodeToken
     next();
   }else{
-    return res.status(401);
+    return res.status(401).send({message: "Unauthorised"});
+  }
+
+  }catch(err){
+    return res.status(401).send({message: "Unauthorised"});
   }
 }
 
 const userAuth = async (req, res, next) => {
-  const authorization = req.headers.authorization;
-  if(!authorization){
-    return res.status(403)
-  }
-  const token = authorization.split(" ")[1];
-  const decodeToken = await jwt.verify(token, SECRET);
-  const user = await User.exists({username: decodeToken.username})
-  if(user){
-    req.user = decodeToken
-    next();
-  }else{
+  try{
+    const authorization = req.headers.authorization;
+    if(!authorization){
+      return res.status(403)
+    }
+    const token = authorization.split(" ")[1];
+    const decodeToken = await jwt.verify(token, SECRET);
+    let user;
+    if(decodeToken){
+       user = await User.exists({username: decodeToken.username})
+    }
+    if(user){
+      req.user = decodeToken
+      next();
+    }else{
+      return res.status(403).json({ message: 'User not found' });
+    }
+  }catch(e){
+    console.log("--------------->", e);
     return res.status(403).json({ message: 'User not found' });
-
   }
-
 }
 
 const courseValidation = (req, res, next) => {
@@ -127,6 +141,18 @@ app.post('/admin/courses', auth, courseValidation ,async(req, res) => {
 
 });
 
+app.get('/admin/courses/:courseId', auth, async (req, res) => {
+  const { courseId } = req.params;
+  const courseById = await Course.findById(courseId)
+
+  if(courseById){
+    res.json(courseById);
+  }else{
+    res.status(404).json({ message: 'Course not found' });
+  }
+
+});
+
 app.put('/admin/courses/:courseId', auth, async (req, res) => {
   const { courseId } = req.params;
   const { title, description, price, imageLink, published } = req.body;
@@ -160,7 +186,7 @@ app.post('/users/signup', async (req, res) => {
 });
 
 app.post('/users/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.headers;
   const user = await User.exists({ username, password });
   if(user){
     const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '1h' });
@@ -173,6 +199,18 @@ app.post('/users/login', async (req, res) => {
 app.get('/users/courses', userAuth, async (req, res) => {
   const courses = await Course.find({published: true});
   res.json({ courses });
+});
+
+app.get('/users/courses/:courseId', userAuth, async (req, res) => {
+  const { courseId } = req.params;
+  const courseById = await Course.findById(courseId)
+
+  if(courseById){
+    res.json(courseById);
+  }else{
+    res.status(404).json({ message: 'Course not found' });
+  }
+
 });
 
 app.post('/users/courses/:courseId', userAuth, async (req, res) => {
