@@ -22,7 +22,7 @@ const adminSchema = new Schema({
 const userSchema = new Schema({
   username: String,
   password: String,
-  purchasedCourses: [{ type: Schema.Types.ObjectId, ref: 'course' }]
+  purchasedCourses: [{ type: Schema.Types.ObjectId, ref: 'course' , unique: true}]
 })
 // let COURSES = [];
 const courseSchema = new Schema({
@@ -116,7 +116,7 @@ app.post('/admin/signup', async (req, res) => {
     const obj = { username, password };
     const adminToBeAdd = new Admin(obj)
     const saveAdmin = await adminToBeAdd.save();
-    const token = jwt.sign({username, role: 'admin'}, SECRET, { expiresIn: '1h' })
+    const token = jwt.sign({username, role: 'admin'}, SECRET, { expiresIn: '100h' })
     res.json({ message: 'Admin created successfully', token });
   }
 });
@@ -125,7 +125,7 @@ app.post('/admin/login', async(req, res) => {
   const {username, password} = req.headers;
   const ifAdminExist = await Admin.exists({ username, password });
   if(ifAdminExist){
-    const token = jwt.sign({ username, role: 'admin' }, SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username, role: 'admin' }, SECRET, { expiresIn: '100h' });
     res.json({ message: 'Logged in successfully', token });
   }else{
     res.status(403).json({ message: 'Invalid username or password' });
@@ -189,7 +189,7 @@ app.post('/users/login', async (req, res) => {
   const { username, password } = req.headers;
   const user = await User.exists({ username, password });
   if(user){
-    const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '100h' });
     res.json({ message: 'Logged in successfully', token });
   }else{
     res.status(403).json({ message: 'Invalid username or password' });
